@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Métodos Numéricos</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Code+Pro:wght@400;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --ink-light: #2d3561;
+    --paper: #f7f4ed;
+    --paper-dark: #ede9df;
+    --accent: #c8102e;
+    --accent2: #1a6b8a;
+    --grid: rgba(26,106,138,0.08);
+    --border: rgba(26,26,46,0.15);
+    --success: #1d7a4a;
+    --mono: 'Source Code Pro', monospace;
+    --serif: 'Lora', serif;
+    --display: 'Playfair Display', serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 2rem 3rem;
+    border-bottom: 4px solid var(--accent);
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '∫∑∂∇λ∞π≈≠';
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.4rem;
+    opacity: 0.08;
+    letter-spacing: 0.5rem;
+    font-family: var(--display);
+  }
+  header h1 {
+    font-family: var(--display);
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    font-family: var(--serif);
+    font-style: italic;
+    opacity: 0.65;
+    margin-top: 0.3rem;
+    font-size: 0.95rem;
+  }
+
+  /* NAV TABS */
+  nav {
+    background: var(--ink-light);
+    display: flex;
+    gap: 0;
+    padding: 0 3rem;
+    border-bottom: 3px solid var(--accent2);
+  }
+  .tab {
+    padding: 0.9rem 1.6rem;
+    color: rgba(247,244,237,0.55);
+    cursor: pointer;
+    font-family: var(--display);
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -3px;
+    transition: all 0.2s;
+    user-select: none;
+    border-top: 2px solid transparent;
+  }
+  .tab:hover { color: rgba(247,244,237,0.85); }
+  .tab.active {
+    color: var(--paper);
+    background: var(--ink);
+    border-bottom-color: var(--ink);
+    border-top: 2px solid var(--accent);
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  /* SECTION TITLES */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.8rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-header h2 {
+    font-family: var(--display);
+    font-size: 1.7rem;
+    color: var(--ink);
+  }
+  .section-header .method-tag {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    background: var(--accent2);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+  .description {
+    font-style: italic;
+    color: #555;
+    margin-bottom: 1.8rem;
+    line-height: 1.7;
+    font-size: 0.95rem;
+    padding-left: 1rem;
+    border-left: 3px solid var(--accent2);
+  }
+
+  /* FORM GRID */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  label {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-light);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  label em {
+    font-style: normal;
+    color: var(--accent);
+    font-size: 0.9em;
+  }
+  input[type="text"], input[type="number"] {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    padding: 0.6rem 0.85rem;
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(26,107,138,0.1);
+  }
+  input.full { grid-column: 1 / -1; }
+
+  .hint {
+    font-size: 0.72rem;
+    color: #888;
+    font-family: var(--mono);
+    margin-top: 0.2rem;
+  }
+
+  /* BUTTON */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 0.75rem 1.8rem;
+    font-family: var(--display);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s, transform 0.1s;
+    border-left: 4px solid var(--accent);
+  }
+  .btn:hover { background: var(--ink-light); }
+  .btn:active { transform: scale(0.98); }
+  .btn svg { width:16px; height:16px; }
+
+  /* RESULT BOX */
+  .result-box {
+    margin-top: 2rem;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  }
+  .result-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.75rem 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .result-header .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .result-body { padding: 1.5rem; }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .badge.success { background: #e8f7ee; color: var(--success); border: 1px solid #9cd4b3; }
+  .badge.error { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+  .badge.info { background: #e8f4f8; color: var(--accent2); border: 1px solid #a9d4e4; }
+
+  .root-value {
+    font-family: var(--display);
+    font-size: 1.6rem;
+    color: var(--ink);
+    margin: 0.3rem 0 1rem;
+  }
+  .root-value span {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    color: var(--accent);
+  }
+
+  /* CHART */
+  .chart-wrap {
+    position: relative;
+    height: 320px;
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #fafafa;
+    padding: 1rem;
+  }
+
+  /* TABLE */
+  .table-wrap {
+    overflow-x: auto;
+    margin-top: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+  }
+  thead tr {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  thead th {
+    padding: 0.6rem 0.9rem;
+    text-align: right;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  thead th:first-child { text-align: center; }
+  tbody tr:nth-child(even) { background: var(--paper-dark); }
+  tbody tr:hover { background: rgba(26,107,138,0.07); }
+  tbody td {
+    padding: 0.5rem 0.9rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td:first-child { text-align: center; color: var(--accent2); font-weight: 600; }
+
+  /* ERROR */
+  .error-msg {
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    padding: 0.8rem 1rem;
+    background: #fdecea;
+    border-left: 3px solid var(--accent);
+    border-radius: 2px;
+    margin-top: 1rem;
+  }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    header { padding: 1.2rem 1.2rem; }
+    nav { padding: 0 0.5rem; overflow-x: auto; }
+    main { padding: 1.5rem 1rem; }
+    .tab { padding: 0.8rem 0.9rem; font-size: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Métodos Numéricos</h1>
+  <p>Búsqueda de raíces y solución de EDOs — Newton-Raphson · Heun · Runge-Kutta RK4</p>
+</header>
+
+<nav>
+  <div class="tab active" onclick="showPage('nr')">Newton-Raphson</div>
+  <div class="tab" onclick="showPage('heun')">Heun / Euler Mejorado</div>
+  <div class="tab" onclick="showPage('rk4')">Runge-Kutta RK4</div>
+</nav>
+
+<main>
+
+<!-- ========== NEWTON-RAPHSON ========== -->
+<div class="page active" id="page-nr">
+  <div class="section-header">
+    <h2>Newton-Raphson</h2>
+    <span class="method-tag">Búsqueda de Raíces</span>
+  </div>
+  <p class="description">
+    Dada una ecuación no lineal <em>f(x) = 0</em>, este método refina iterativamente una estimación
+    de la raíz usando la fórmula <strong>x<sub>n+1</sub> = x<sub>n</sub> − f(x<sub>n</sub>) / f′(x<sub>n</sub>)</strong>.
+    La derivada se calcula numéricamente si no se proporciona analíticamente.
+  </p>
+
+  <div class="form-grid">
+    <div class="field" style="grid-column: 1 / -1;">
+      <label>f(x) = <em>*</em></label>
+      <input type="text" id="nr-fx" value="x^10 - 1" placeholder="ej. x^3 - 2*x - 5">
+      <span class="hint">Usa: x^2, sqrt(x), sin(x), exp(x), log(x), abs(x)</span>
+    </div>
+    <div class="field">
+      <label>x₀ — Valor inicial <em>*</em></label>
+      <input type="number" id="nr-x0" value="0.5" step="any">
+    </div>
+    <div class="field">
+      <label>Máx. iteraciones</label>
+      <input type="number" id="nr-iter" value="50" min="1" max="500">
+    </div>
+    <div class="field">
+      <label>Tolerancia (e)</label>
+      <input type="number" id="nr-tol" value="1e-6" step="any">
+    </div>
+    <div class="field">
+      <label>Decimales</label>
+      <input type="number" id="nr-dec" value="6" min="1" max="12">
+    </div>
+  </div>
+
+  <button class="btn" onclick="runNR()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    Calcular Raíz
+  </button>
+
+  <div id="nr-result"></div>
+</div>
+
+<!-- ========== HEUN ========== -->
+<div class="page" id="page-heun">
+  <div class="section-header">
+    <h2>Improved Euler Method</h2>
+    <span class="method-tag">Solucionador de EDO — Heun</span>
+  </div>
+  <p class="description">
+    Resuelve problemas de valor inicial <em>y′ = f(x, y), y(x₀) = y₀</em> usando el enfoque
+    predictor-corrector: predice con Euler y corrige promediando las pendientes en ambos extremos del intervalo.
+  </p>
+
+  <div class="form-grid">
+    <div class="field" style="grid-column: 1 / -1;">
+      <label>y′ = f(x, y) = <em>*</em></label>
+      <input type="text" id="heun-fxy" value="x + y" placeholder="ej. x + y, -2*y, x^2 - y">
+      <span class="hint">Variables: x, y — ej. "x*y", "sin(x) - y"</span>
+    </div>
+    <div class="field">
+      <label>x₀ — x inicial <em>*</em></label>
+      <input type="number" id="heun-x0" value="0" step="any">
+    </div>
+    <div class="field">
+      <label>y₀ — y inicial <em>*</em></label>
+      <input type="number" id="heun-y0" value="1" step="any">
+    </div>
+    <div class="field">
+      <label>h — Tamaño de paso <em>*</em></label>
+      <input type="number" id="heun-h" value="0.1" step="any" min="0.0001">
+    </div>
+    <div class="field">
+      <label>x<sub>f</sub> — x objetivo <em>*</em></label>
+      <input type="number" id="heun-xf" value="1" step="any">
+    </div>
+    <div class="field">
+      <label>Decimales</label>
+      <input type="number" id="heun-dec" value="4" min="1" max="12">
+    </div>
+  </div>
+
+  <button class="btn" onclick="runHeun()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    Calcular Trayectoria
+  </button>
+
+  <div id="heun-result"></div>
+</div>
+
+<!-- ========== RK4 ========== -->
+<div class="page" id="page-rk4">
+  <div class="section-header">
+    <h2>Runge-Kutta RK4</h2>
+    <span class="method-tag">Solucionador de EDO — 4° Orden</span>
+  </div>
+  <p class="description">
+    Resuelve <em>y′ = f(x, y)</em> con precisión de cuarto orden evaluando cuatro estimaciones
+    de pendiente (k₁, k₂, k₃, k₄) por paso y combinándolas con pesos <strong>1/6, 1/3, 1/3, 1/6</strong>.
+  </p>
+
+  <div class="form-grid">
+    <div class="field" style="grid-column: 1 / -1;">
+      <label>y′ = f(x, y) = <em>*</em></label>
+      <input type="text" id="rk4-fxy" value="x + y" placeholder="ej. x + y, -2*y, x^2 - y">
+      <span class="hint">Variables: x, y — ej. "x*y", "sin(x) - y"</span>
+    </div>
+    <div class="field">
+      <label>x₀ — x inicial <em>*</em></label>
+      <input type="number" id="rk4-x0" value="0" step="any">
+    </div>
+    <div class="field">
+      <label>y₀ — y inicial <em>*</em></label>
+      <input type="number" id="rk4-y0" value="1" step="any">
+    </div>
+    <div class="field">
+      <label>h — Tamaño de paso <em>*</em></label>
+      <input type="number" id="rk4-h" value="0.1" step="any" min="0.0001">
+    </div>
+    <div class="field">
+      <label>x<sub>f</sub> — x objetivo <em>*</em></label>
+      <input type="number" id="rk4-xf" value="1" step="any">
+    </div>
+    <div class="field">
+      <label>Decimales</label>
+      <input type="number" id="rk4-dec" value="4" min="1" max="12">
+    </div>
+  </div>
+
+  <button class="btn" onclick="runRK4()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    Calcular Trayectoria
+  </button>
+
+  <div id="rk4-result"></div>
+</div>
+
+</main>
+
+<script>
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ─── Chart registry ───────────────────────────────────────────────────────────
+const charts = {};
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+// ─── Math helpers ─────────────────────────────────────────────────────────────
+function evalFx(expr, x) {
+  return math.evaluate(expr, { x });
+}
+function evalFxy(expr, x, y) {
+  return math.evaluate(expr, { x, y });
+}
+function numericalDeriv(expr, x, h = 1e-7) {
+  return (evalFx(expr, x + h) - evalFx(expr, x - h)) / (2 * h);
+}
+function fmt(v, dec) {
+  return Number(v).toFixed(dec);
+}
+
+// ─── Newton-Raphson ───────────────────────────────────────────────────────────
+function runNR() {
+  const fx   = document.getElementById('nr-fx').value.trim();
+  const x0   = parseFloat(document.getElementById('nr-x0').value);
+  const maxI = parseInt(document.getElementById('nr-iter').value);
+  const tol  = parseFloat(document.getElementById('nr-tol').value);
+  const dec  = parseInt(document.getElementById('nr-dec').value);
+  const out  = document.getElementById('nr-result');
+
+  try {
+    let x = x0;
+    const rows = [];
+    let converged = false;
+    let iteration = 0;
+
+    for (let i = 0; i < maxI; i++) {
+      iteration = i + 1;
+      const fval  = evalFx(fx, x);
+      const dfval = numericalDeriv(fx, x);
+      if (Math.abs(dfval) < 1e-20) { throw new Error('Derivada cercana a cero en la iteración ' + iteration); }
+      const xNew = x - fval / dfval;
+      rows.push({ i: iteration, x, fx: fval, dfx: dfval });
+      if (Math.abs(xNew - x) < tol) { x = xNew; converged = true; break; }
+      x = xNew;
+    }
+
+    // Build chart data: f(x) curve
+    const xMin = Math.min(x0, x) - 2;
+    const xMax = Math.max(x0, x) + 2;
+    const nPts = 300;
+    const curveX = [], curveY = [];
+    for (let i = 0; i <= nPts; i++) {
+      const xi = xMin + (xMax - xMin) * i / nPts;
+      try { curveY.push({ x: xi, y: evalFx(fx, xi) }); } catch(e) {}
+    }
+    const iterPts = rows.map(r => ({ x: r.x, y: r.fx }));
+
+    destroyChart('nr');
+    out.innerHTML = `
+      <div class="result-box">
+        <div class="result-header"><div class="dot"></div>Resultado</div>
+        <div class="result-body">
+          <div class="badge ${converged ? 'success' : 'error'}">
+            ${converged ? '✓ Convergió' : '✗ No convergió'} — iteración ${iteration}
+          </div>
+          <div class="root-value">Raíz ≈ <span>${fmt(x, dec)}</span></div>
+          <p style="font-size:0.82rem;color:#666;font-family:var(--mono);margin-bottom:1rem;">
+            f(raíz) = ${fmt(evalFx(fx, x), dec + 2)}
+          </p>
+          <div class="chart-wrap"><canvas id="chart-nr"></canvas></div>
+          <div class="divider"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>i</th><th>x</th><th>f(x)</th><th>f′(x)</th></tr></thead>
+              <tbody>
+                ${rows.map(r => `
+                  <tr>
+                    <td>${r.i}</td>
+                    <td>${fmt(r.x, dec)}</td>
+                    <td>${fmt(r.fx, dec)}</td>
+                    <td>${fmt(r.dfx, dec)}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+
+    charts['nr'] = new Chart(document.getElementById('chart-nr'), {
+      data: {
+        datasets: [
+          { type: 'line', label: 'f(x)', data: curveY, borderColor: '#1a6b8a', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false },
+          { type: 'scatter', label: 'Iteraciones', data: iterPts, backgroundColor: '#c8102e', pointRadius: 5 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { family: 'Source Code Pro', size: 11 } } } },
+        scales: {
+          x: { type: 'linear', title: { display: true, text: 'x', font: { family: 'Lora' } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { title: { display: true, text: 'f(x)', font: { family: 'Lora' } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+        }
+      }
+    });
+  } catch(e) {
+    out.innerHTML = `<div class="error-msg">⚠ Error: ${e.message}</div>`;
+  }
+}
+
+// ─── Heun ─────────────────────────────────────────────────────────────────────
+function runHeun() {
+  const fxy  = document.getElementById('heun-fxy').value.trim();
+  const x0   = parseFloat(document.getElementById('heun-x0').value);
+  const y0   = parseFloat(document.getElementById('heun-y0').value);
+  const h    = parseFloat(document.getElementById('heun-h').value);
+  const xf   = parseFloat(document.getElementById('heun-xf').value);
+  const dec  = parseInt(document.getElementById('heun-dec').value);
+  const out  = document.getElementById('heun-result');
+
+  try {
+    if (h <= 0) throw new Error('El tamaño de paso h debe ser positivo');
+    if (xf <= x0) throw new Error('x_f debe ser mayor que x₀');
+
+    let x = x0, y = y0;
+    const rows = [];
+    const MAX = 2000;
+    let steps = 0;
+
+    while (x < xf - h * 1e-9 && steps < MAX) {
+      const k1 = evalFxy(fxy, x, y);
+      const yPred = y + h * k1;
+      const k2 = evalFxy(fxy, x + h, yPred);
+      const yNext = y + (h / 2) * (k1 + k2);
+      rows.push({ i: steps, x, y, k1, yPred, k2, yNext });
+      x = x + h;
+      y = yNext;
+      steps++;
+    }
+    // last point
+    rows.push({ i: steps, x, y, k1: null, yPred: null, k2: null, yNext: null });
+
+    const chartData = rows.map(r => ({ x: r.x, y: r.y }));
+    destroyChart('heun');
+
+    out.innerHTML = `
+      <div class="result-box">
+        <div class="result-header"><div class="dot"></div>Solución Aproximada (Heun)</div>
+        <div class="result-body">
+          <div class="badge info">y(${fmt(x, dec)}) ≈ ${fmt(y, dec)} — ${steps} pasos</div>
+          <div class="chart-wrap"><canvas id="chart-heun"></canvas></div>
+          <div class="divider"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>i</th><th>x</th><th>y</th><th>k₁ = f(x,y)</th><th>y* (pred)</th><th>k₂ = f(x+h,y*)</th><th>y_next</th></tr></thead>
+              <tbody>
+                ${rows.slice(0, -1).map(r => `
+                  <tr>
+                    <td>${r.i}</td>
+                    <td>${fmt(r.x, dec)}</td>
+                    <td>${fmt(r.y, dec)}</td>
+                    <td>${fmt(r.k1, dec)}</td>
+                    <td>${fmt(r.yPred, dec)}</td>
+                    <td>${fmt(r.k2, dec)}</td>
+                    <td>${fmt(r.yNext, dec)}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+
+    charts['heun'] = new Chart(document.getElementById('chart-heun'), {
+      data: {
+        datasets: [
+          { type: 'line', label: 'y(x) — Heun', data: chartData, borderColor: '#1a6b8a', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#c8102e', tension: 0.3, fill: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { family: 'Source Code Pro', size: 11 } } } },
+        scales: {
+          x: { type: 'linear', title: { display: true, text: 'x', font: { family: 'Lora' } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { title: { display: true, text: 'y', font: { family: 'Lora' } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+        }
+      }
+    });
+  } catch(e) {
+    out.innerHTML = `<div class="error-msg">⚠ Error: ${e.message}</div>`;
+  }
+}
+
+// ─── Runge-Kutta 4 ────────────────────────────────────────────────────────────
+function runRK4() {
+  const fxy  = document.getElementById('rk4-fxy').value.trim();
+  const x0   = parseFloat(document.getElementById('rk4-x0').value);
+  const y0   = parseFloat(document.getElementById('rk4-y0').value);
+  const h    = parseFloat(document.getElementById('rk4-h').value);
+  const xf   = parseFloat(document.getElementById('rk4-xf').value);
+  const dec  = parseInt(document.getElementById('rk4-dec').value);
+  const out  = document.getElementById('rk4-result');
+
+  try {
+    if (h <= 0) throw new Error('El tamaño de paso h debe ser positivo');
+    if (xf <= x0) throw new Error('x_f debe ser mayor que x₀');
+
+    let x = x0, y = y0;
+    const rows = [];
+    const MAX = 2000;
+    let steps = 0;
+
+    while (x < xf - h * 1e-9 && steps < MAX) {
+      const k1 = evalFxy(fxy, x, y);
+      const k2 = evalFxy(fxy, x + h/2, y + h*k1/2);
+      const k3 = evalFxy(fxy, x + h/2, y + h*k2/2);
+      const k4 = evalFxy(fxy, x + h, y + h*k3);
+      const yNext = y + (h / 6) * (k1 + 2*k2 + 2*k3 + k4);
+      rows.push({ i: steps, x, y, k1, k2, k3, k4, yNext });
+      x = x + h;
+      y = yNext;
+      steps++;
+    }
+    rows.push({ i: steps, x, y, k1: null, k2: null, k3: null, k4: null, yNext: null });
+
+    const chartData = rows.map(r => ({ x: r.x, y: r.y }));
+    destroyChart('rk4');
+
+    out.innerHTML = `
+      <div class="result-box">
+        <div class="result-header"><div class="dot"></div>Solución Aproximada (RK4)</div>
+        <div class="result-body">
+          <div class="badge info">y(${fmt(x, dec)}) ≈ ${fmt(y, dec)} — ${steps} pasos</div>
+          <div class="chart-wrap"><canvas id="chart-rk4"></canvas></div>
+          <div class="divider"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>i</th><th>x</th><th>y</th><th>k₁</th><th>k₂</th><th>k₃</th><th>k₄</th><th>y_next</th></tr></thead>
+              <tbody>
+                ${rows.slice(0, -1).map(r => `
+                  <tr>
+                    <td>${r.i}</td>
+                    <td>${fmt(r.x, dec)}</td>
+                    <td>${fmt(r.y, dec)}</td>
+                    <td>${fmt(r.k1, dec)}</td>
+                    <td>${fmt(r.k2, dec)}</td>
+                    <td>${fmt(r.k3, dec)}</td>
+                    <td>${fmt(r.k4, dec)}</td>
+                    <td>${fmt(r.yNext, dec)}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+
+    charts['rk4'] = new Chart(document.getElementById('chart-rk4'), {
+      data: {
+        datasets: [
+          { type: 'line', label: 'y(x) — RK4', data: chartData, borderColor: '#1d7a4a', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#1d7a4a', tension: 0.3, fill: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { family: 'Source Code Pro', size: 11 } } } },
+        scales: {
+          x: { type: 'linear', title: { display: true, text: 'x', font: { family: 'Lora' } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { title: { display: true, text: 'y', font: { family: 'Lora' } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+        }
+      }
+    });
+  } catch(e) {
+    out.innerHTML = `<div class="error-msg">⚠ Error: ${e.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>
