@@ -1,0 +1,5 @@
+name: metodos-numericos
+static_sites:
+  - name: metodos-numericos
+    source_dir: /
+    index_document: numerical-methods.html
